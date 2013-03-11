@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pasang</title>
+<style>
+h1 {color:#FFF;text-shadow:2px 2px 3px #000;font-size:24pt;position:absolute;left:50%;top:50%;z-index:3;margin-top:-150px;margin-left:-100px}
+h1 a{color:#FFF;}
+a:hover {color:#FF0}
+body{background:#666;font:9pt monospace}
+#container{border:10px solid #333;background:#B95;float:left;width:240px;height:240px;position:absolute;left:50%;top:50%;margin-left:-115px;margin-top:-115px;box-shadow:2px 2px 10px #000}
+#board div {font:15px Arial;float:left;width:20px;height:20px;text-align:center}
+#board {width:220px;float:left;position:absolute;margin:10px;}
+#board div span {;display:block;border-radius:8px;width:14px;height:14px;margin:3px;box-shadow:1px 1px 3px rgba(0,0,0,0.5)}
+.player1 {color:#A00;border-color:#600 !important}
+.player2 {color:#00A;border-color:#006 !important}
+.black {background:#000}
+.white {background:#FFF}
+.red {background:#A00}
+.blue {background:#00A}
+.possible {background:rgba(255,255,0,0.5);cursor:pointer;border-radius:20px;}
+.possible:hover {background:rgba(255,255,0,1)}
+#temp div {border-top:1px solid #000;border-left:1px solid #000;width:19px;height:19px;float:left}
+#temp {width:200px;border-right:1px solid #000;border-bottom:1px solid #000;position:absolute;top:20px;left:20px;}
+#temp .center1 {border:1px none #000;width:20px}
+#temp .center2 {border-left:1px none #000;width:20px}
+#temp .center3 {border-top:1px none #000;height:20px}
+a {color:#333;text-decoration:none}
+footer {position:fixed;bottom:0px;right:30px}
+#score {width:100px;height:220px;background:#EEE;position:absolute;left:50%;top:50%;margin-left:150px;margin-top:-100px;border:4px solid #333;text-align:center;}
+#score span {font-size:24pt;}
+#score h2 {font:12pt Cambria,Serif;font-weight:bold;text-shadow:1px 1px 1px rgba(0,0,0,0.3)}
+#score a:hover {color:#333;text-decoration:underline}
+</style>
+<script>
+window.onload=function(){
+var SIZE=11*11,BLACK=1,WHITE=2,HORIZONTAL=0,VERTICAL=1,cells,totalPoints=0,
+grid=[2,2,2,2,2,1,1,1,1,1,2,
+	1,2,2,2,2,1,1,1,1,2,2,
+	1,1,2,2,2,1,1,1,2,2,2,
+	1,1,1,2,2,1,1,2,2,2,2,
+	1,1,1,1,2,1,2,2,2,2,2,
+	1,1,1,1,1,0,1,1,1,1,1,
+	2,2,2,2,2,1,2,1,1,1,1,
+	2,2,2,2,1,1,2,2,1,1,1,
+	2,2,2,1,1,1,2,2,2,1,1,
+	2,2,1,1,1,1,2,2,2,2,1,
+	2,1,1,1,1,1,2,2,2,2,2] 
+function _y(i)  {return ~~(i/11)}
+function _x(i)  {return i%11}
+function _c(x,y){return x+y*11}
+var _v=[ //vary
+  function(i,n) {return _c(i,_y(n))},  //x
+  function(i,n) {return _c(_x(n),i)}   //y
+]
+
+function Grid(pGrid){
+var _grid=pGrid;
+
+}
+
+function inRange(i,n,v){return n!=60 && i>=0 && i<11 && (grid[n]==v||grid[n]==0) &&v<3 }
+function _count(n,inc,d,action,player,next){
+	var f1=d?_y:_x,f2=_v[d],f3=!d?_y:_x,i=f1(n)+inc,v=grid[f2(i,n)],ret=0
+	while(inRange(i,f2(i,n),v)&&f3(n)==f3(f2(i,n))){
+		if(grid[f2(i,n)])ret++;
+		if(action==1){
+			player.setScore(grid[f2(i,n)])
+			grid[f2(i,n)]=0
+		}
+		if(action==2){
+			cells[f2(i,n)].className="possible"
+			cells[f2(i,n)].n=n
+			cells[f2(i,n)].d=d
+			cells[f2(i,n)].inc=inc
+			cells[f2(i,n)].onclick=function(){
+				_count(this.n,this.inc,this.d,1,player)
+				reset()
+				if(typeof next=="function") next()
+				refresh()
+			}
+		}
+		i+=inc
+		if(v==0)v=grid[f2(i,n)]
+	} //counts same colored tokens
+	return [v,ret]
+}
+function count(d,n,action,player,next){ //easier to read but worse performance
+    var
+        l=_count(n,-1,d,action,player,next),
+        r=_count(n, 1,d,action,player,next)
+        return l[0]==r[0]?l[1]+r[1]:[l[1],r[1]]
+}
+
+function isLegal(d,n){
+	var tokens=count(d,n)
+	if(tokens.length){
+	  return !(tokens[0]%2==0&&tokens[1]%2==0)&&n!=60
+	} else
+	  return tokens%2==1&&n!=60
+}
+
+function firstPhase(n,player,next){
+	for(var i=0,c=player.num?6:0;i<5;i++){
+		player.setScore(grid[_c(_x(n),c+i)])
+		grid[_c(_x(n),c+i)]=0
+	}
+	player.set(_x(n),-1)
+	next()
+}
+function secondPhase(n,player,next){
+	player.setScore(grid[n])
+	grid[n]=0;
+	grid[_c(player.x,_y(n))]=player.num+3
+	player.set(player.x,_y(n))
+	thirdPhase(HORIZONTAL,_c(player.x,_y(n)),player,next)
+}
+
+function thirdPhase(d,n,player,next){
+  		var tokens=count(d,n)
+  		if(tokens.length){
+  			if(tokens[0]%2==1&&tokens[1]%2==1){
+  			  reset()
+  			  _count(n,-1,d,2,player,next)
+  			  _count(n,1,d,2,player,next)
+  			  return false
+  			} else if(tokens[1]%2==1){
+  					_count(n,1,d,1,player)
+  					if(typeof next=="function") next()
+  					return true
+  			} else if(tokens[0]%2==1){
+  					_count(n,-1,d,1,player)
+  					if(typeof next=="function") next()
+  					return true
+  			}
+  		} else {
+  			if(tokens%2==1) count(d,n,1,player)
+  			if(typeof next=="function") next()
+  			return true
+  		}
+  }
+  
+
+
+  scoreboard=[document.getElementById("score1"),document.getElementById("score2")];
+  board=document.getElementById("board");
+  temp=document.getElementById("temp");
+  board.innerHTML=(new Array(SIZE+1).join("<div></div>"));
+  cells=board.getElementsByTagName("div");
+  container=document.getElementById("container")
+  
+  var player=[Player(0),Player(1)]
+  function Player(num){
+    var lx=-1,ly=-1,score=0;
+  	return {
+  		x:-1,y:-1,num:num,
+  		set:function(x,y){
+  			if(ly!=-1) grid[_c(lx,ly)]=0
+  			lx=x,ly=y
+  			this.x=x;this.y=y
+  			grid[_c(x,y)]=3+this.num
+  		},
+  		getScore:function(){return score},
+  		setScore:function(p){score+=p;totalPoints+=p},
+  		c:function(){return _c(this.x,this.y)},
+  		nextPlayer:function(){return player[(num+1)%2]}
+  	}
+  }
+
+
+function firstPhaseUI(player,except,next){
+	container.className="player"+(player.num+1)
+	for(var i=0;i<11;i++){
+		for(var j=0;j<5;j++){
+		   if(i!=except){
+		    var n=_c(i,j+(player.num>0?6:0))
+			cells[n].className="possible"
+			cells[n].x=i
+			cells[n].onclick=function(){
+				reset()
+				firstPhase(this.x,player,next)
+				refresh()
+			}
+		   }
+		}
+	}
+}
+
+function secondPhaseUI(player,next){
+	container.className="player"+(player.num+1)
+	for(var i=-2;i<=2;i++){
+	for(var j=0;j<5;j++){
+	    if((player.x+i)>=0&& (player.x+i)<11 &&i!=0){
+	      var n=_c(player.x+i,j+(player.num>0?6:0)),
+	      old=grid[n]
+	      grid[n]=0
+	      if(isLegal(HORIZONTAL,_c(player.x,j+(player.num>0?6:0)))){
+		    cells[n].className="possible"
+		    cells[n].onclick=function(){
+			  reset()
+			  secondPhase(this.i,player,next)
+			  refresh()
+		    }
+	      }
+		  grid[n]=old
+		}
+	}}
+}
+
+  function thirdPhaseUI(player){
+  	container.className="player"+(player.num+1)
+    var n=player.c(),moves=0;
+  	reset()
+	for(var i=_x(n)+1;_c(i,_y(n))!=60&&i<11&&grid[_c(i,_y(n))]==0;i+=1){
+	    var curr=_c(i,_y(n))
+	    if(assignCell(player,VERTICAL,curr)) moves++;
+	}
+	for(var i=_x(n)-1;_c(i,_y(n))!=60&&i>=0&&grid[_c(i,_y(n))]==0;i-=1){
+	    var curr=_c(i,_y(n))
+		if(assignCell(player,VERTICAL,curr)) moves++;
+	}
+	for(var i=_y(n)+1;_c(_x(n),i)!=60&&i<11&&grid[_c(_x(n),i)]==0;i+=1){
+	    var curr=_c(_x(n),i)
+		if(assignCell(player,HORIZONTAL,curr)) moves++;
+	}
+	for(var i=_y(n)-1;_c(_x(n),i)!=60&&i>=0&&grid[_c(_x(n),i)]==0;i-=1){
+		 var curr=_c(_x(n),i)
+		if(assignCell(player,HORIZONTAL,curr)) moves++;
+	}
+	
+	if(moves==0&&totalPoints!=180){
+		alert("Player "+((player.num+1)%2)+" has suntuked and lost!")
+	} else if(totalPoints==180){
+		alert("Game over")
+	}
+}
+
+
+
+
+
+
+  function assignCell(player,d,n){
+  	if(isLegal(d,n)){
+  		cells[n].className="possible"
+  		cells[n].d=d
+  		cells[n].player=player
+  		cells[n].onclick=function(){
+				player.set(_x(this.i),_y(this.i))
+				thirdPhase(this.d,this.i,this.player,function(){
+				thirdPhaseUI(player.nextPlayer());
+				})
+				refresh();
+  		}
+  		return true
+  	}
+  	return false
+  }
+  
+  firstPhaseUI(player[0],-1,function(){
+  firstPhaseUI(player[1],10-player[0].x,function(){
+  secondPhaseUI(player[0],function(){
+  secondPhaseUI(player[1],function(){
+  thirdPhaseUI(player[0])
+  })})})})
+
+
+function reset(){
+	for(var i=SIZE-1;i>=0;i--){
+  		cells[i].className=""
+  		cells[i].onclick={}
+}}
+
+function refresh(){
+  for(var i=SIZE-1;i>=0;i--){
+  		cells[i].innerHTML=OUT[grid[i]]
+}
+scoreboard[0].innerHTML=player[0].getScore()
+scoreboard[1].innerHTML=player[1].getScore()
+}
+
+
+  OUT=["&nbsp;","<span class='black'>&nbsp;</span>","<span class='white'>&nbsp;</span>","<span class='red'>&nbsp;</span>","<span class='blue'>&nbsp;</span>"]
+  for(var i=SIZE-1;i>=0;i--){cells[i].i=i}
+  refresh()
+  temp.innerHTML=(new Array(101)).join("<div>&nbsp;</div>")
+  temps=temp.getElementsByTagName("div")
+  temps[5*10+5].className="center1"
+  temps[4*10+5].className="center2"
+  temps[5*10+4].className="center3"
+}</script>
+</head>
+<body>
+<h1><a href="http://en.wikipedia.org/wiki/Pasang">Pasang</a>.js</h1>
+<div id="container">
+<div id="temp"></div>
+<div id="board"></div>
+</div>
+<div id="score">
+<div><a href="http://pasang-emas.sourceforge.net/how-to-play/index.xhtml">How to play</a></div>
+<h2 class='player1'>Player 1</h2>
+<span id="score1"></span>
+<h2 class='player2'>Player 2</h2>
+<span id="score2"></span>
+</div>
+<footer><a href="http://twitter.com/mfirdaus/">@mfirdaus</a></footer></body>
+</html>
