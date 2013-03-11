@@ -1,5 +1,5 @@
-Pasang.js - A javascript version of a traditional Bruneian Game
-===============================================================
+Pasang.js - A javascript version of a traditional Bruneian board game
+=====================================================================
 
 Demo: http://mfirdaus.net/random/pasang.htm
 
